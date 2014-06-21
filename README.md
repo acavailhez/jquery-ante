@@ -1,12 +1,29 @@
 jQuery Ante (jquery-ante)
 =============
 
-jQuery Ante is a library made to plug events to be trigger before any event bound to a DOM element with `$().on()`
+jQuery Ante will bind events to execute *before* any bound jQuery event.
+
+Super quick example
+-------------
+
+```javascript
+var $a = $('#link');
+$a.click(function(){
+	alert('executed after');
+});
+$a.ante('click',function(){
+	alert('executed before');
+});
+```
+
+In this example, clicking on the `#link` will show the "executed before" alert before showing the "executed after"
 
 Quick example
 -------------
 
-You have a button which will display a modal, but the modal content is not yet in the DOM and needs to be fetched through an api call
+The real power of jquery-ante comes when you associate it with asynchronous events (such as AJAX calls, or any jQuery Promise)
+
+Imagine you have a button to display a modal, but the modal content is not yet in the DOM and needs to be fetched through an API call
 
 ```html
 <a id="show-modal-button">Show the modal</a>
