@@ -1,5 +1,5 @@
 /* ===================================================
- * jquery-ante v1.0
+ * jquery-async v0.1
  * https://github.com/acavailhez/jquery-ante
  * ===================================================
  * Copyright 2014 Arnaud CAVAILHEZ

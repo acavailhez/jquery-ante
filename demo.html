@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>jQuery Ante</title>
+
+    <meta charset='utf-8'/>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1"/>
+    <meta name="description" content="Jquery-ante : bind asynchronous events before jQuery-bound events"/>
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" type="text/css" rel="stylesheet" media="screen, projection"/>
+    <link href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" type="text/css" rel="stylesheet" media="screen, projection"/>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js" type="text/javascript"></script>
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js" type="text/javascript"></script>
+    <script src="js/jquery.ante.js" type="text/javascript"></script>
+
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="header_wrap" class="outer">
+    <header class="inner">
+        <a id="forkme_banner" href="https://github.com/acavailhez/jquery-async">View on GitHub</a>
+
+        <h1 id="project_title">Jquery-ante</h1>
+
+        <h2 id="project_tagline">jQuery Ante will bind events to execute before any bound jQuery event.</h2>
+
+        <section id="downloads">
+            <a class="zip_download_link" href="https://github.com/acavailhez/jquery-ante/zipball/master">Download this project as a .zip file</a>
+            <a class="tar_download_link" href="https://github.com/acavailhez/jquery-ante/tarball/master">Download this project as a tar.gz file</a>
+        </section>
+    </header>
+</div>
+
+<!-- MAIN CONTENT -->
+<div id="main_content_wrap" class="outer">
+    <section id="main_content" class="inner">
+
+        <br/>
+        <br/>
+
+        <h1 style="text-align: center;">jQuery Ante Demo</h1>
+
+        <p style="text-align: right"><a href="http://github.com/acavailhez/jquery-ante">Project page &raquo;</a></p>
+
+        <br/>
+        <br/>
+        <br/>
+
+        <h3>Fetch the content of a bootstrap modal just on time</h3>
+
+        <p>Here we create a bootstrap modal link, but the modal does not yet exist in the dom (check the source). </p>
+
+        <p>We are going to fetch it just as the user clicks the button.</p>
+
+        <a id="button" class="btn btn-info" data-toggle="modal" data-target="#modal"> Open modal</a>
+
+        <script>
+            //bind to bootstrap namespaced modal event
+            $('#button').ante('click.modal.data-api', function () {
+                //fetch the temperature in San Francisco
+                var yql = encodeURIComponent('select item from weather.forecast where location="94107"');
+                return $.ajax({
+                    type: 'POST',
+                    dataType: 'jsonp',
+                    url: 'http://query.yahooapis.com/v1/public/yql?format=json&q=' + yql,
+                    success: function (json) {
+                        var temperature = json.query.results.channel.item.condition.temp + '°F';
+                        $('#modal').remove();
+                        var $modal = $('<div class="modal hide fade" id="#modal"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button><h4 class="modal-title">Temperature in San Francisco</h4></div><div class="modal-body">' + temperature + '</div><div class="modal-footer"><button class="btn" data-dismiss="modal">Close</button></div></div>');
+                        $('body').append($modal);
+                    }
+                });
+            });
+
+        </script>
+
+
+        <br/>
+        <br/>
+        <br/>
+
+
+    </section>
+</div>
+
+<!-- FOOTER  -->
+<div id="footer_wrap" class="outer">
+    <footer class="inner">
+        <p class="copyright">Jquery-ante maintained by <a href="https://github.com/acavailhez">acavailhez</a></p>
+
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+    </footer>
+</div>
+
+
+</body>
+</html>
