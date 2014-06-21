@@ -61,7 +61,7 @@ new function () {
                 var $element = $($elements[i]);
                 if ($element.data(key)) {
                     //find handler: it's the last argument that is a function
-                    var argumentIndex = args.length - 1;
+                    var argumentIndex = args.length;
                     while ((argumentIndex-- > -1) && (typeof args[argumentIndex] !== 'function') && (!args[argumentIndex] || typeof args[argumentIndex].handler !== 'function')) {
 
                     }

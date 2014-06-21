@@ -1,0 +1,247 @@
+<html>
+<head>
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" type="text/css" rel="stylesheet" media="screen, projection"/>
+    <link href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" type="text/css" rel="stylesheet" media="screen, projection"/>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js" type="text/javascript"></script>
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js" type="text/javascript"></script>
+    <script src="../jquery.ante.js" type="text/javascript"></script>
+</head>
+<body>
+<div class="container">
+    <div class="row">
+        <div class="col-12" id="tests">
+            <br/>
+        </div>
+    </div>
+</div>
+
+
+<script>
+function assert(success, title) {
+    if (success) {
+        $('#tests').append('<div class="alert alert-success"><span class="fa fa-check"></span>&nbsp;&nbsp;' + title + '</div>');
+    } else {
+        $('#tests').append('<div class="alert alert-danger"><span class="fa fa-times"></span>&nbsp;&nbsp;' + title + '</div>');
+    }
+}
+
+function $a() {
+    var $a = $('<a></a>');
+    $('body').append($a);
+    return $a;
+}
+
+function test(func) {
+    try {
+        new func();
+    }
+    catch (ex) {
+        assert(false, ex);
+        throw ex;
+    }
+}
+
+test(function () {
+    var test1 = 0;
+    var test2 = 0;
+    $a().click(function () {
+        test1 = 2;
+    }).ante('click', function () {
+        test1 = 1;
+        test2 = 1;
+    }).click();
+
+    setTimeout(function () {
+        assert(test1 === 2, 'click executed after ante');
+        assert(test2 === 1, 'ante executed');
+    }, 100)
+});
+
+test(function () {
+    var test1 = 0;
+    var test2 = 0;
+    $a().ante('click', function () {
+        test1 = 1;
+        test2 = 1;
+    }).click(function () {
+        test1 = 2;
+    }).click();
+
+    setTimeout(function () {
+        assert(test1 === 2, 'click executed after ante (ante called before)');
+        assert(test2 === 1, 'ante executed (ante called before)');
+    }, 100)
+});
+
+test(function () {
+    var test1 = 0;
+    var test2 = 0;
+    $a().click(function () {
+        test1 = 2;
+    }).ante('hover', function () {
+        test1 = 1;
+        test2 = 1;
+    }).click();
+
+    setTimeout(function () {
+        assert(test1 === 2, 'click executed');
+        assert(test2 === 0, 'ante on different binding not executed');
+    }, 100)
+});
+
+test(function () {
+    var test1 = 0;
+    var test2 = 0;
+    $a().on('click', function () {
+        test1 = 2;
+    }).ante('click', function () {
+        test1 = 1;
+        test2 = 1;
+    }).click();
+
+    setTimeout(function () {
+        assert(test1 === 2, 'click executed (binding with on)');
+        assert(test2 === 1, 'ante executed (binding with on)')
+    }, 100)
+});
+
+test(function () {
+    var test1 = 0;
+    var test2 = 0;
+    $a().ante('click', function () {
+        test1 = 1;
+        test2 = 1;
+    }).on('click', function () {
+        test1 = 2;
+    }).click();
+
+    setTimeout(function () {
+        assert(test1 === 2, 'click executed (binding with on, ante before)');
+        assert(test2 === 1, 'ante executed (binding with on, ante before)')
+    }, 100)
+});
+
+test(function () {
+    var test1 = 0;
+    var test2 = 0;
+    $a().on({click: function () {
+        test1 = 2;
+    }}).ante('click', function () {
+        test1 = 1;
+        test2 = 1;
+    }).click();
+
+    setTimeout(function () {
+        assert(test1 === 2, 'click executed (binding with object)');
+        assert(test2 === 1, 'ante executed (binding with object)')
+    }, 100)
+});
+
+test(function () {
+    var test1 = 0;
+    var test2 = 0;
+    $a().ante('click', function () {
+        test1 = 1;
+        test2 = 1;
+    }).on({click: function () {
+        test1 = 2;
+    }}).click();
+
+    setTimeout(function () {
+        assert(test1 === 2, 'click executed (binding with object)');
+        assert(test2 === 1, 'ante executed (binding with object)')
+    }, 100)
+});
+
+test(function () {
+    var test1 = 0;
+    var test2 = 0;
+    var $a = $('<a class="test-document"></a>');
+    $('body').append($a);
+    $(document).on('click', '.test-document', function (e) {
+        test1 = 2;
+    });
+    $a.ante('click', function () {
+        test1 = 1;
+        test2 = 1;
+    }).click();
+
+    setTimeout(function () {
+        assert(test1 === 2, 'click executed (binding with document)');
+        assert(test2 === 1, 'ante executed (binding with document)')
+    }, 100)
+});
+
+test(function () {
+    var test1 = 0;
+    var test2 = 0;
+    var $a = $('<a class="test-document2"></a>');
+    $('body').append($a);
+    $a.ante('click', function () {
+        test1 = 1;
+        test2 = 1;
+    });
+    $(document).on('click', '.test-document2', function (e) {
+        test1 = 2;
+    });
+    $a.click();
+
+    setTimeout(function () {
+        assert(test1 === 2, 'click executed (binding with document, ante before)');
+        assert(test2 === 1, 'ante executed (binding with document, ante before)')
+    }, 100)
+});
+
+test(function () {
+    var test1 = 0;
+    var test2 = 0;
+    $a().ante('click', function () {
+        test1 = 1;
+        test2 = 1;
+    }).on('click.namespace', function () {
+        test1 = 2;
+    }).trigger('click.namespace');
+
+    setTimeout(function () {
+        assert(test1 === 2, 'click executed (namespace)');
+        assert(test2 === 0, 'ante executed (namespace)')
+    }, 100)
+});
+
+test(function () {
+    var test1 = 0;
+    var test2 = 0;
+    $a().ante('click.namespace', function () {
+        test1 = 1;
+        test2 = 1;
+    }).on('click.namespace', function () {
+        test1 = 2;
+    }).trigger('click.namespace');
+
+    setTimeout(function () {
+        assert(test1 === 2, 'click executed (namespace2)');
+        assert(test2 === 1, 'ante executed (namespace2)')
+    }, 100)
+});
+
+test(function () {
+    var test1 = 0;
+    var test2 = 0;
+    $a().ante('click.namespace3', function () {
+        test1 = 1;
+        test2 = 1;
+    }).on('click.namespace', function () {
+        test1 = 2;
+    }).trigger('click.namespace');
+
+    setTimeout(function () {
+        assert(test1 === 2, 'click executed (namespace3)');
+        assert(test2 === 0, 'ante executed (namespace3)')
+    }, 100)
+});
+
+
+</script>
+
+</body>
+</html>
