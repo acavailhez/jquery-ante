@@ -204,7 +204,7 @@ test(function () {
 
     setTimeout(function () {
         assert(test1 === 2, 'click executed (namespace)');
-        assert(test2 === 0, 'ante executed (namespace)')
+        assert(test2 === 0, 'ante not executed (namespace)')
     }, 100)
 });
 
@@ -236,7 +236,28 @@ test(function () {
 
     setTimeout(function () {
         assert(test1 === 2, 'click executed (namespace3)');
-        assert(test2 === 0, 'ante executed (namespace3)')
+        assert(test2 === 0, 'ante not executed (namespace3)')
+    }, 100)
+});
+
+test(function () {
+    var test1 = 0;
+    var test2 = 0;
+    $a().ante('click', function () {
+        var deferred = new $.Deferred();
+        setTimeout(function(){
+            test1 = 1;
+            test2 = 1;
+            deferred.resolve();
+        },50);
+        return deferred.promise();
+    }).on('click', function () {
+        test1 = 2;
+    }).click();
+
+    setTimeout(function () {
+        assert(test1 === 2, 'click executed (promise)');
+        assert(test2 === 1, 'ante executed (promise)')
     }, 100)
 });
 
