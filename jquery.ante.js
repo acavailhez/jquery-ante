@@ -52,6 +52,15 @@ new function () {
             });
             return this;
         }
+        if(args.length > 1 && typeof args[1] === 'string'){
+            //call to all sub-elements with selector
+            $(args[1],$elements).each(function(i,element){
+                var cloneArgs = args.slice();
+                cloneArgs.splice(1,1);
+                jQuery.fn.on.apply($(element),cloneArgs);
+            });
+            return this;
+        }
         var eventsSplat = events.split(' ');
         for (var splitIndex = 0; splitIndex < eventsSplat.length; splitIndex++) {
             var event = eventsSplat[splitIndex];
