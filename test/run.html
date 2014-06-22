@@ -43,8 +43,10 @@ function test(func) {
 test(function () {
     var test1 = 0;
     var test2 = 0;
+    var test3 = 0;
     $a().click(function () {
         test1 = 2;
+        test3 = 1;
     }).ante('click', function () {
         test1 = 1;
         test2 = 1;
@@ -52,6 +54,7 @@ test(function () {
 
     setTimeout(function () {
         assert(test1 === 2, 'click executed after ante');
+        assert(test3 === 1, 'click executed');
         assert(test2 === 1, 'ante executed');
     }, 100);
 });
@@ -194,50 +197,223 @@ test(function () {
 test(function () {
     var test1 = 0;
     var test2 = 0;
+    var test3 = 0;
     $a().ante('click', function () {
         test1 = 1;
         test2 = 1;
     }).on('click.namespace', function () {
         test1 = 2;
-    }).trigger('click.namespace');
+        test3 = 1;
+    }).trigger('click');
 
     setTimeout(function () {
-        assert(test1 === 2, 'click executed (namespace)');
         assert(test2 === 1, 'ante executed (namespace)');
+        assert(test3 === 1, 'click executed (namespace)');
+        assert(test1 === 2, 'click executed after ante (namespace)');
     }, 100);
 });
 
 test(function () {
     var test1 = 0;
+    $a().on('click', function () {
+        test1 = 1;
+    }).trigger('click.namespace');
+
+    assert(test1 === 0, 'click not called namespace');
+});
+
+test(function () {
+    var test1 = 0;
+    $a().on('click.namespace', function () {
+        test1 = 1;
+    }).trigger('click');
+
+    assert(test1 === 1, 'click called namespace');
+});
+
+
+test(function () {
+    var test1 = 0;
     var test2 = 0;
+    var test3 = 0;
+    var test4 = 0;
+    var test5 = 0;
+    $a().ante('click', function () {
+        test1 = 1;
+        test2 = 1;
+    }).on('click.namespace', function () {
+        test1 = 2;
+        test5 = 2;
+        test3 = 1;
+    }).ante('click.namespace', function () {
+        test4 = 1;
+        test5 = 1;
+    }).trigger('click.namespace');
+
+    setTimeout(function () {
+        assert(test5 === 2, 'click executed after ante2 (namespace2)');
+        assert(test2 === 0, 'ante not executed (namespace2)');
+        assert(test3 === 1, 'click executed (namespace2)');
+        assert(test4 === 1, 'ante2 executed (namespace2)');
+    }, 100);
+});
+
+test(function () {
+    var anteone = 0;
+    var antetwo = 0;
+    var clickone = 0;
+    var clicktwo = 0;
+    var antebefore1 = 0;
+    var antebefore2 = 0;
+    var antebefore3 = 0;
+    var antebefore4 = 0;
+    $a().ante('click.one', function () {
+        var deferred = new $.Deferred();
+        setTimeout(function () {
+            anteone = 1;
+            antebefore1 = 1;
+            antebefore3 = 1;
+            deferred.resolve();
+        }, 50);
+        return deferred.promise();
+    }).on('click.one.two', function () {
+        clicktwo = 1;
+        antebefore2 = 2;
+        antebefore3 = 2;
+    }).trigger('click');
+
+    setTimeout(function () {
+        assert(anteone === 1, 'ante one executed (namespace complex)');
+        assert(clicktwo === 1, 'click two executed (namespace complex)');
+        assert(antebefore3 === 2, 'ante one before click two (namespace complex)');
+    }, 100);
+});
+
+test(function () {
+    var anteone = 0;
+    var antetwo = 0;
+    var clickone = 0;
+    var clicktwo = 0;
+    var antebefore1 = 0;
+    var antebefore2 = 0;
+    var antebefore3 = 0;
+    var antebefore4 = 0;
+    $a().ante('click.one', function () {
+        var deferred = new $.Deferred();
+        setTimeout(function () {
+            anteone = 1;
+            antebefore1 = 1;
+            antebefore3 = 1;
+            deferred.resolve();
+        }, 50);
+        return deferred.promise();
+    }).ante('click.one.two', function () {
+        var deferred = new $.Deferred();
+        setTimeout(function () {
+            antetwo = 1;
+            antebefore2 = 1;
+            antebefore4 = 1;
+            deferred.resolve();
+        }, 50);
+        return deferred.promise();
+
+    }).on('click.one', function () {
+        clickone = 1;
+        antebefore1 = 2;
+        antebefore4 = 2;
+    }).on('click.one.two', function () {
+        clicktwo = 1;
+        antebefore2 = 2;
+        antebefore3 = 2;
+    }).trigger('click.one');
+
+    setTimeout(function () {
+        assert(anteone === 1, 'ante one executed (namespace complex2)');
+        assert(antetwo === 1, 'ante two executed (namespace complex2)');
+        assert(clickone === 1, 'click one executed (namespace complex2)');
+        assert(clicktwo === 1, 'click two executed (namespace complex2)');
+        assert(antebefore1 === 2, 'ante one before click one (namespace complex2)');
+        assert(antebefore3 === 2, 'ante one before click two (namespace complex2)');
+        assert(antebefore2 === 2, 'ante two before click two (namespace complex2)');
+    }, 200);
+});
+
+test(function () {
+    var test1 = 0;
+    var test2 = 0;
+    var test3 = 0;
     $a().ante('click.namespace', function () {
         test1 = 1;
         test2 = 1;
     }).on('click.namespace', function () {
         test1 = 2;
+        test3 = 1;
     }).trigger('click.namespace');
 
     setTimeout(function () {
-        assert(test1 === 2, 'click executed (namespace2)');
-        assert(test2 === 1, 'ante executed (namespace2)');
+        assert(test1 === 2, 'click executed after ante (namespace3)');
+        assert(test2 === 1, 'ante executed (namespace3)');
+        assert(test3 === 1, 'click executed (namespace3)');
     }, 100);
 });
 
 test(function () {
     var test1 = 0;
     var test2 = 0;
-    $a().ante('click.namespace3', function () {
+    var test3 = 0;
+    $a().ante('click.namespace', function () {
         test1 = 1;
         test2 = 1;
     }).on('click.namespace', function () {
         test1 = 2;
-    }).trigger('click.namespace');
+        test3 = 1;
+    }).trigger('click');
 
     setTimeout(function () {
-        assert(test1 === 2, 'click executed (namespace3)');
-        assert(test2 === 0, 'ante not executed (namespace3)');
+        assert(test1 === 2, 'click executed after ante (namespace4)');
+        assert(test2 === 1, 'ante executed (namespace4)');
+        assert(test3 === 1, 'click executed (namespace4)');
     }, 100);
 });
+
+
+test(function () {
+    var test1 = 0;
+    var test2 = 0;
+    var test3 = 0;
+    $a().ante('click.namespace', function () {
+        test1 = 1;
+        test2 = 1;
+    }).on('click.namespace.sub', function () {
+        test1 = 2;
+        test3 = 1;
+    }).trigger('click.namespace.sub');
+
+    setTimeout(function () {
+        assert(test2 === 0, 'ante not executed (namespace5)');
+        assert(test3 === 1, 'click not executed (namespace5)');
+    }, 100);
+});
+
+test(function () {
+    var test1 = 0;
+    var test2 = 0;
+    var test3 = 0;
+    $a().on('click.namespace.sub', function () {
+        test1 = 2;
+        test3 = 1;
+    }).ante('click.namespace', function () {
+        test1 = 1;
+        test2 = 1;
+    }).trigger('click.namespace.sub');
+
+    setTimeout(function () {
+        assert(test2 === 0, 'ante not executed (namespace6, ante after)');
+        assert(test3 === 1, 'click executed (namespace6, ante after)');
+    }, 100);
+});
+
+
 
 test(function () {
     var test1 = 0;
@@ -310,6 +486,62 @@ test(function () {
         assert(test1 === 2, 'click executed after (binding with document, promise, ante before)');
         assert(test2 === 1, 'ante executed (binding with document, promise, ante before)');
         assert(test3 === 1, 'click executed (binding with document, promise, ante before)');
+    }, 100);
+});
+
+test(function () {
+    var test1 = 0;
+    var test2 = 0;
+    var test3 = 0;
+    var $a = $('<a class="test-document5"></a>');
+    $('body').append($a);
+    $a.ante('click', function () {
+        var deferred = new $.Deferred();
+        setTimeout(function () {
+            test1 = 1;
+            test2 = 1;
+            deferred.resolve();
+        }, 50);
+        return deferred.promise();
+    });
+    $(document).on('click.modal', '.test-document5', function (e) {
+        test1 = 2;
+        test3 = 1;
+    });
+    $a.click();
+
+    setTimeout(function () {
+        assert(test1 === 2, 'click executed after (binding a la bootstrap, promise, ante before)');
+        assert(test2 === 1, 'ante executed (binding a la bootstrap, promise, ante before)');
+        assert(test3 === 1, 'click executed (binding a la bootstrap, promise, ante before)');
+    }, 100);
+});
+
+test(function () {
+    var test1 = 0;
+    var test2 = 0;
+    var test3 = 0;
+    var $a = $('<a class="test-document5"></a>');
+    $('body').append($a);
+    $(document).on('click.modal', '.test-document5', function (e) {
+        test1 = 2;
+        test3 = 1;
+    });
+    $a.ante('click', function () {
+        var deferred = new $.Deferred();
+        setTimeout(function () {
+            test1 = 1;
+            test2 = 1;
+            deferred.resolve();
+        }, 50);
+        return deferred.promise();
+    });
+    $a.click();
+
+    setTimeout(function () {
+        assert(test1 === 2, 'click executed after (binding a la bootstrap, promise, ante after)');
+        assert(test2 === 1, 'ante executed (binding a la bootstrap, promise, ante after)');
+        assert(test3 === 1, 'click executed (binding a la bootstrap, promise, ante after)');
     }, 100);
 });
 
