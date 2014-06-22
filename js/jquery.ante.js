@@ -1,5 +1,5 @@
 /* ===================================================
- * jquery-async v0.1
+ * jquery-ante v1.0
  * https://github.com/acavailhez/jquery-ante
  * ===================================================
  * Copyright 2014 Arnaud CAVAILHEZ
@@ -38,9 +38,100 @@
  * ========================================================== */
 
 new function () {
+    var KEY_ROOT = 'acavailhez-ante-';
+    var KEY_FUNCTIONS = '__functions_bound';
+    var KEY_ANTES = '__antes_bound';
+    var ALREADY_CALLED = '__done';
+    var ALREADY_BOUND = '__bound';
     //replace $().on so that every call to bind(), live(), click() etc will
     //prepend a call to the ante function defined if any
     var jQueryOn = jQuery.fn.on;
+
+    //trickle down the namespace tree, triggering asynchronous ante functions first
+    //and then normal bound functions
+    function recursiveTriggerNamespaceKnot($element, knot, bindingEvent) {
+        var anteFunctions = knot[KEY_ANTES];
+        var normalBoundFunctions = knot[KEY_FUNCTIONS];
+
+        function recursiveTriggerAnteFunction(index, callback) {
+            if (index >= anteFunctions.length) {
+                callback();
+                return;
+            }
+            var anteReturn = anteFunctions[index].apply($element, [bindingEvent]);
+            if (typeof anteReturn !== 'undefined') {
+                //delay the call,
+                //do not trigger if the promise returned an error
+                jQuery.when(anteReturn).then(function () {
+                    recursiveTriggerAnteFunction(index + 1, callback);
+                }, function () {
+                    throw new Error("a Promise passed to jquery-ante was rejected");
+                });
+            }
+            else {
+                recursiveTriggerAnteFunction(index + 1, callback);
+            }
+        }
+
+        function triggerAfterAnte() {
+            if (normalBoundFunctions) {
+                for (var i = 0; i < normalBoundFunctions.length; i++) {
+                    normalBoundFunctions[i].apply($element, [bindingEvent]);
+                }
+            }
+            //go deeper in namespace
+            $.each(knot, function (key, deeperKnot) {
+                if (key === KEY_ANTES || key === KEY_FUNCTIONS || key === ALREADY_BOUND)return;
+                recursiveTriggerNamespaceKnot($element, deeperKnot, bindingEvent);
+            });
+        }
+
+        if (anteFunctions) {
+            recursiveTriggerAnteFunction(0, triggerAfterAnte);
+        }
+        else {
+            triggerAfterAnte();
+        }
+    }
+
+    function rebindOn($element, event) {
+        var eventNamespaces = event.split('.');
+        var eventNamespaceForRebinding = '';
+        var key = KEY_ROOT + eventNamespaces[0];
+        var namespacedObject = $element.data(key);
+
+        for (var deep = 0; deep < eventNamespaces.length; deep++) {
+            if (eventNamespaceForRebinding && eventNamespaceForRebinding.length > 0) {
+                eventNamespaceForRebinding += '.';
+            }
+            if (namespacedObject)namespacedObject = namespacedObject[eventNamespaces[deep]];
+            eventNamespaceForRebinding += eventNamespaces[deep];
+            if (!namespacedObject || !namespacedObject[ALREADY_BOUND]) {
+                if (namespacedObject)namespacedObject[ALREADY_BOUND] = true;
+                jQueryOn.apply($element, [eventNamespaceForRebinding, function (bindingEvent) {
+                    if (bindingEvent[ALREADY_CALLED])return;
+                    bindingEvent[ALREADY_CALLED] = true;
+                    var key = KEY_ROOT + bindingEvent.type;
+                    var fullEvent = bindingEvent.type;
+                    if (bindingEvent.namespace) {
+                        fullEvent += '.' + bindingEvent.namespace;
+                    }
+                    var eventNamespaces = fullEvent.split('.');
+                    var namespacedObject = $element.data(key);
+                    //find correct element
+                    for (var deeper = 1; deeper < eventNamespaces.length; deeper++) {
+                        if (namespacedObject) {
+                            namespacedObject = namespacedObject[eventNamespaces[deeper]];
+                        }
+                    }
+                    if (namespacedObject) {
+                        recursiveTriggerNamespaceKnot($element, namespacedObject, bindingEvent);
+                    }
+                }]);
+            }
+        }
+    }
+
     jQuery.fn.on = function () {
         var $elements = $(this);
         var args = jQuery.makeArray(arguments);
@@ -52,14 +143,33 @@ new function () {
             });
             return this;
         }
+        if (args.length > 1 && typeof args[1] === 'string') {
+            //call to all sub-elements with selector
+            $(args[1], $elements).each(function (i, element) {
+                var cloneArgs = args.slice();
+                cloneArgs.splice(1, 1);
+                jQuery.fn.on.apply($(element), cloneArgs);
+            });
+            return this;
+        }
         var eventsSplat = events.split(' ');
         for (var splitIndex = 0; splitIndex < eventsSplat.length; splitIndex++) {
             var event = eventsSplat[splitIndex];
-            var key = 'acavailhez-ante-' + event;
+            //remove namespaces progressively for key
+            var eventNamespaces = event.split('.');
+            var key = KEY_ROOT + eventNamespaces[0];
 
             for (var i = 0; i < $elements.length; i++) {
                 var $element = $($elements[i]);
-                if ($element.data(key)) {
+                var namespacedObject = $element.data(key);
+
+                if (namespacedObject) {
+                    for (var deep = 1; deep < eventNamespaces.length; deep++) {
+                        if (!namespacedObject[eventNamespaces[deep]]) {
+                            namespacedObject[eventNamespaces[deep]] = {};
+                        }
+                        namespacedObject = namespacedObject[eventNamespaces[deep]];
+                    }
                     //find handler: it's the last argument that is a function
                     var argumentIndex = args.length;
                     while ((argumentIndex-- > -1) && (typeof args[argumentIndex] !== 'function') && (!args[argumentIndex] || typeof args[argumentIndex].handler !== 'function')) {
@@ -73,7 +183,16 @@ new function () {
                     if (typeof args[argumentIndex] !== 'function' && typeof args[argumentIndex].handler === 'function') {
                         handler = args[argumentIndex].handler;
                     }
-                    $element.data(key + '-functions-bound').push(handler);
+
+                    //add the function at the namespace knot
+                    if (!namespacedObject[KEY_FUNCTIONS]) {
+                        namespacedObject[KEY_FUNCTIONS] = []
+                    }
+
+                    rebindOn($element, event);
+
+                    namespacedObject[KEY_FUNCTIONS].push(handler);
+                    return this;
                 }
                 else {
                     jQueryOn.apply(this, arguments);
@@ -88,75 +207,80 @@ new function () {
         var eventsSplat = events.split(' ');
         for (var splitIndex = 0; splitIndex < eventsSplat.length; splitIndex++) {
             var event = eventsSplat[splitIndex];
-            var key = 'acavailhez-ante-' + event;
+            var eventNamespaces = event.split('.');
+            var rootEvent = eventNamespaces[0];
+            var key = KEY_ROOT + rootEvent;
             if (!$elements.length) {
                 throw new Error("jquery-ante called on 0 element, your selector is most likely empty");
             }
             for (var i = 0; i < $elements.length; i++) {
                 var $element = $($elements[i]);
-                var functionToRebind;
-                if ($element.data(key)) {
-                    //the element already has an ante defined
-                    functionToRebind = function () {
 
-                    }
-                }
-                else {
-                    //set a property to know that this element is managed by a ante call
-                    $element.data(key, true);
-                    //get functions directly bound to the event
-                    var functionsBound = [];
-                    var allFunctionsBound = $._data($element[0], "events");
-                    //get functions inderectly bound to the event (using $(document).on('click','selector',function))
-                    var indirectlyBoundFunctions = $._data($(document)[0], 'events');
-                    if (indirectlyBoundFunctions && indirectlyBoundFunctions[event] && indirectlyBoundFunctions[event].length > 0) {
-                        for (var k = 0; k < indirectlyBoundFunctions[event].length; k++) {
-                            var functionInderctlyBound = indirectlyBoundFunctions[event][k];
-                            //check that selector matches current element
-                            if (functionInderctlyBound.selector && $element.is(functionInderctlyBound.selector)) {
-                                functionsBound.push(functionInderctlyBound.handler);
-                            }
-                        }
-                    }
-                    if (allFunctionsBound && allFunctionsBound[event] && allFunctionsBound[event].length > 0) {
-                        var objectsBound = allFunctionsBound[event];
-                        for (var k = 0; k < objectsBound.length; k++) {
-                            functionsBound.push(objectsBound[k].handler);
-                        }
-                    }
-                    if (functionsBound.length > 0) {
-                        $element.data(key + '-functions-bound', functionsBound);
-                        //remove functions bound
-                        $element.off(event);
-                    }
-                    else {
-                        //no function was yet bound on this event
-                        $element.data(key + '-functions-bound', []);
-                    }
-                    functionToRebind = function (bindingEvent) {
-                        var delayed = function () {
-                            var functions = $element.data(key + '-functions-bound');
-                            for (var j = 0; j < functions.length; j++) {
-                                var functionBound = functions[j];
-                                functionBound.apply($element, [bindingEvent]);
-                            }
-                        };
-                        var handlerReturn = handler.apply($element, []);
-                        if (typeof handlerReturn !== 'undefined') {
-                            //delay the call,
-                            //do not trigger if the promise returned an error
-                            jQuery.when(handlerReturn).then(function () {
-                                delayed();
-                            }, function () {
-                                throw new Error("a Promise passed to jquery-ante was rejected");
-                            });
-                        }
-                        else {
-                            delayed();
+                //get functions directly bound to the event
+                var functionsBound = [];
+                var allFunctionsBound = $._data($element[0], "events");
+                //get functions inderectly bound to the event (using $(document).on('click','selector',function))
+                var indirectlyBoundFunctions = $._data($(document)[0], 'events');
+                if (indirectlyBoundFunctions && indirectlyBoundFunctions[rootEvent] && indirectlyBoundFunctions[rootEvent].length > 0) {
+                    for (var k = 0; k < indirectlyBoundFunctions[rootEvent].length; k++) {
+                        var functionInderctlyBound = indirectlyBoundFunctions[rootEvent][k];
+                        //check that selector matches current element
+                        if (functionInderctlyBound.selector && $element.is(functionInderctlyBound.selector)) {
+                            functionsBound.push(functionInderctlyBound);
                         }
                     }
                 }
-                jQueryOn.apply($element, [event, functionToRebind]);
+                if (allFunctionsBound && allFunctionsBound[rootEvent] && allFunctionsBound[rootEvent].length > 0) {
+                    var objectsBound = allFunctionsBound[rootEvent];
+                    for (var k = 0; k < objectsBound.length; k++) {
+                        functionsBound.push(objectsBound[k]);
+                    }
+                }
+                //remove functions bound
+                $element.off(event);
+
+                var namespacedObject = $element.data(key);
+                if (!namespacedObject) {
+                    namespacedObject = {};
+                    $element.data(key, namespacedObject);
+                }
+
+                rebindOn($element, event);
+
+                for (var deep = 1; deep < eventNamespaces.length; deep++) {
+                    if (!namespacedObject[eventNamespaces[deep]]) {
+                        namespacedObject[eventNamespaces[deep]] = {};
+                    }
+                    namespacedObject = namespacedObject[eventNamespaces[deep]];
+                }
+
+                //bind normal-bound ante
+                if (functionsBound.length > 0) {
+                    $.each(functionsBound, function (i, functionBound) {
+                        //get correct namespace
+                        var correctNamespacedObject = namespacedObject;
+                        if (functionBound.namespace) {
+                            var subNamespaces = functionBound.namespace.split('.');
+                            for (var deep = 0; deep < subNamespaces.length; deep++) {
+                                if (!namespacedObject[subNamespaces[deep]]) {
+                                    namespacedObject[subNamespaces[deep]] = {};
+                                }
+                                correctNamespacedObject = namespacedObject[subNamespaces[deep]];
+                            }
+                            rebindOn($element, rootEvent + '.' + functionBound.namespace);
+                        }
+                        if (!correctNamespacedObject[KEY_FUNCTIONS]) {
+                            correctNamespacedObject[KEY_FUNCTIONS] = [];
+                        }
+                        correctNamespacedObject[KEY_FUNCTIONS].push(functionBound.handler);
+                    });
+                }
+
+                //bind ante
+                if (!namespacedObject[KEY_ANTES]) {
+                    namespacedObject[KEY_ANTES] = [];
+                }
+                namespacedObject[KEY_ANTES].push(handler);
             }
         }
         return $elements;

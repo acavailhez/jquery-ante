@@ -12,7 +12,7 @@
     <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" type="text/css" rel="stylesheet" media="screen, projection"/>
     <link href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" type="text/css" rel="stylesheet" media="screen, projection"/>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js" type="text/javascript"></script>
-    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js" type="text/javascript"></script>
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.js" type="text/javascript"></script>
     <script src="js/jquery.ante.js" type="text/javascript"></script>
 
 </head>
@@ -59,7 +59,7 @@
 
         <script>
             //bind to bootstrap namespaced modal event
-            $('#button').ante('click.modal.data-api', function () {
+            $('#button').ante('click', function () {
                 //fetch the temperature in San Francisco
                 var yql = encodeURIComponent('select item from weather.forecast where location="94107"');
                 return $.ajax({
@@ -69,7 +69,7 @@
                     success: function (json) {
                         var temperature = json.query.results.channel.item.condition.temp + '°F';
                         $('#modal').remove();
-                        var $modal = $('<div class="modal hide fade" id="#modal"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button><h4 class="modal-title">Temperature in San Francisco</h4></div><div class="modal-body">' + temperature + '</div><div class="modal-footer"><button class="btn" data-dismiss="modal">Close</button></div></div>');
+                        var $modal = $('<div class="modal fade in" id="modal"> <div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button><h4 class="modal-title">Temperature in San Francisco</h4></div><div class="modal-body">' + temperature + '</div><div class="modal-footer"><button class="btn" data-dismiss="modal">Close</button></div></div></div>');
                         $('body').append($modal);
                     }
                 });
