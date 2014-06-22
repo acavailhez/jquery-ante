@@ -3,6 +3,12 @@ jQuery Ante (jquery-ante)
 
 jQuery Ante will bind events to execute *before* any bound jQuery event.
 
+Demo
+-------------
+
+A quick example of preloading content before showing it as a modal:
+http://acavailhez.github.io/jquery-ante/demo.html
+
 Super quick example
 -------------
 
